@@ -6,9 +6,9 @@ Usage:
 	chesscom-pgn <gameid> [--lichess]
 
 Options:
-	-h --help     		Show this screen.
-	--version     		Show version
-	--lichess 			Generates a lichess analysis link
+	-h --help	Show this screen.
+	--version	Show version
+	--lichess	Generates a lichess analysis link
 '''
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -155,4 +155,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+	main()
