@@ -1,0 +1,158 @@
+#!/usr/bin/env python2
+'''
+chesscom-pgn
+
+Usage:
+	chesscom-pgn <gameid> [--lichess]
+
+Options:
+	-h --help     		Show this screen.
+	--version     		Show version
+	--lichess 			Generates a lichess analysis link
+'''
+from bs4 import BeautifulSoup
+from selenium import webdriver
+from datetime import datetime
+from collections import OrderedDict
+import requests
+
+
+class ChessComPGN(object):
+
+	url = 'https://www.chess.com/livechess/game?id=%s'
+
+	def __init__(self, id):
+		self.headers = OrderedDict()
+		self.headers['Event'] = 'Live Chess'
+		self.headers['Site'] = 'Chess.com'
+
+		driver = webdriver.PhantomJS()
+		driver.get(self.url % str(id))
+		self.soup = BeautifulSoup(driver.page_source, 'html.parser')
+
+		self._notation = None
+		self._elems = {}
+
+	@property
+	def event(self):
+		return self.headers['Event']
+
+	@property
+	def site(self):
+		return self.headers['Site']
+
+	@property
+	def date(self):
+		if 'Date' not in self.headers:
+			date = self._elemSidebar.find('p').text.split(':')[1].strip()
+			date = datetime.strptime(date, '%b %d, %Y')
+			self.headers['Date'] = date.strftime('%Y.%m.%d')
+		return self.headers['Date']
+
+	@property
+	def white(self):
+		if 'White' not in self.headers:
+			self.headers['White'] = self._elemDetails[0].text
+		return self.headers['White']
+
+	@property
+	def black(self):
+		if 'Black' not in self.headers:
+			self.headers['Black'] = self._elemDetails[1].text
+		return self.headers['Black']
+
+	@property
+	def whiteElo(self):
+		if 'WhiteElo' not in self.headers:
+			parent = self._elemContent.find(text=self.white).parent.parent.parent
+			self.headers['WhiteElo'] = parent.find('span', {'class': 'playerrating'}).text
+		return self.headers['WhiteElo']
+
+	@property
+	def blackElo(self):
+		if 'BlackElo' not in self.headers:
+			parent = self._elemContent.find(text=self.black).parent.parent.parent
+			self.headers['BlackElo'] = parent.find('span', {'class': 'playerrating'}).text
+		return self.headers['BlackElo']
+
+	@property
+	def timeControl(self):
+		if 'TimeControl' not in self.headers:
+			self.headers['TimeControl'] = self._elemSidebar.findAll('p')[1].text.split(':')[1].strip()
+		return self.headers['TimeControl']
+
+	@property
+	def termination(self):
+		if 'Termination' not in self.headers:
+			self.headers['Termination'] = self._elemSidebar.find('div', {'class': 'notice'}).text
+		return self.headers['Termination']
+
+	@property
+	def notation(self):
+		if self._notation is None:
+			notation = [span.text for span in self.soup.find(id='notation').findAll('span')]
+			notation = zip(*[iter(notation)]*3)
+			self._notation = ' '.join(map((lambda m: '%s%s %s' % m), notation))
+		return self._notation
+
+	def __str__(self):
+		_ = self.date
+		_ = self.white
+		_ = self.black
+		_ = self.whiteElo
+		_ = self.blackElo
+		_ = self.timeControl
+		_ = self.termination
+
+		pgn = '\n'.join(map(lambda (k, v): '[%s "%s"]' % (k, v), self.headers.iteritems()))
+		return pgn + '\n\n' + self.notation
+
+	@property
+	def _elemContent(self):
+		if 'content' not in self._elems:
+			self._elems['content'] = self.soup.find('div', {'class': 'content left'})
+		return self._elems['content']
+
+	@property
+	def _elemSidebar(self):
+		if 'sidebar' not in self._elems:
+			self._elems['sidebar'] = self.soup.find('div', {'class': 'sidebar right'})
+		return self._elems['sidebar']
+
+	@property
+	def _elemPlayers(self):
+		if 'players' not in self._elems:
+			self._elems['players'] = self.soup.findAll('div', {'class': 'players'})
+		return self._elems['players']
+
+	@property
+	def _elemDetails(self):
+		if 'details' not in self._elems:
+			self._elems['details'] = self.soup.find(id='details').findAll('a')
+		return self._elems['details']
+
+
+def main():
+	import sys
+	from docopt import docopt
+	args = docopt(__doc__, version='chesscom-pgn 1.0')
+	
+	PGN = ChessComPGN(args['<gameid>'])
+	pgn = str(PGN)
+	
+	if not args['--lichess']:
+		print(pgn)
+		sys.exit(0)
+
+	payload = {
+		'pgn': pgn,
+		'analyse': 'on'
+	}
+
+	res = requests.post('http://en.lichess.org/import', data=payload)
+	print(res.url)
+	sys.exit(0)
+
+
+if __name__ == '__main__':
+    main()
