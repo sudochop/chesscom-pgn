@@ -2,8 +2,8 @@
 ### Why
 
 - Non-members have no way to download game PGN's
-- Free users have to download a file (which is a pain).
-- 100% of the time I just copy/paste it into lichess' import tool.
+- Free users have to download a file (which is a pain)
+- 100% of the time I just copy/paste it into lichess' import tool
 
 ### Installation
 
