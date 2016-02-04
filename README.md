@@ -36,6 +36,13 @@ $ ./chesscom-pgn 1446963708 --lichess
 http://en.lichess.org/4mzSY6qI
 ```
 
+Or better yet.
+
+```
+# alias chrome="open -a \"Google Chrome\""
+$ chrome $(./chesscom-pgn 1446963708 --lichess)
+```
+
 ### Caveats
 
 Currently no way to scrape the pgn's `[Result]` header.
